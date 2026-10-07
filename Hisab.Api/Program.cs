@@ -20,7 +20,8 @@ builder.Services.AddControllers();
 // Database
 // ======================================================
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString =
+    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {

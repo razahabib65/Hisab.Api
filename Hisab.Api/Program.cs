@@ -17,24 +17,26 @@ builder.Services.AddControllers();
 
 
 // ======================================================
-// Database
+// Database - Railway PostgreSQL
 // ======================================================
 
 var connectionString =
-    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+    Environment.GetEnvironmentVariable("DATABASE_URL");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new InvalidOperationException("DefaultConnection is missing.");
+    throw new InvalidOperationException("DATABASE_URL is missing.");
 }
 
-if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+if (connectionString.StartsWith(
+    "postgresql://",
+    StringComparison.OrdinalIgnoreCase))
 {
     var uri = new Uri(connectionString);
 
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder
+    var npgsqlBuilder = new NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
         Port = uri.Port,
@@ -42,7 +44,8 @@ if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreC
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1
             ? Uri.UnescapeDataString(userInfo[1])
-            : ""
+            : "",
+        SslMode = SslMode.Require
     };
 
     connectionString = npgsqlBuilder.ConnectionString;
@@ -51,6 +54,7 @@ if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreC
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
+
 
 // ======================================================
 // JWT Authentication
@@ -116,7 +120,6 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1"
     });
 
-    // JWT Bearer Authentication
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -158,6 +161,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+
 // ======================================================
 // Middleware
 // ======================================================
@@ -173,9 +177,11 @@ app.UseStaticFiles();
 app.UseCors("AngularPolicy");
 
 
-// Authentication MUST come before Authorization
+// Authentication
 app.UseAuthentication();
 
+
+// Authorization
 app.UseAuthorization();
 
 
@@ -183,5 +189,8 @@ app.UseAuthorization();
 app.MapControllers();
 
 
+// ======================================================
 // Run
+// ======================================================
+
 app.Run();

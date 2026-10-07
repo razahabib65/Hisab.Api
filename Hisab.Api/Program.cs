@@ -1,4 +1,3 @@
-
 using Hisab.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -18,33 +17,23 @@ builder.Services.AddControllers();
 
 
 // ======================================================
-// Database - PostgreSQL
+// Database
 // ======================================================
 
-var connectionString =
-    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    throw new InvalidOperationException(
-        "PostgreSQL connection string is missing."
-    );
+    throw new InvalidOperationException("DefaultConnection is missing.");
 }
 
-// Railway DATABASE_URL can come as:
-// postgresql://username:password@host:port/database
-// Convert it to an Npgsql connection string.
-
-if (connectionString.StartsWith(
-    "postgresql://",
-    StringComparison.OrdinalIgnoreCase))
+if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
 {
     var uri = new Uri(connectionString);
 
     var userInfo = uri.UserInfo.Split(':', 2);
 
-    var npgsqlBuilder = new NpgsqlConnectionStringBuilder
+    var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
         Port = uri.Port,
@@ -52,9 +41,7 @@ if (connectionString.StartsWith(
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1
             ? Uri.UnescapeDataString(userInfo[1])
-            : "",
-        SslMode = SslMode.Require,
-        TrustServerCertificate = true
+            : ""
     };
 
     connectionString = npgsqlBuilder.ConnectionString;
@@ -63,7 +50,6 @@ if (connectionString.StartsWith(
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
-
 
 // ======================================================
 // JWT Authentication
@@ -171,7 +157,6 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-
 // ======================================================
 // Middleware
 // ======================================================
@@ -197,9 +182,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 
-// ======================================================
 // Run
-// ======================================================
-
 app.Run();
-

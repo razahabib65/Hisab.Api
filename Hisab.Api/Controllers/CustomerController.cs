@@ -40,11 +40,41 @@ namespace Hisab.Controllers
                 });
             }
 
+            // Get all customers of this business
             var customers = await _context.Customers
                 .Where(c => c.BusinessId == businessId)
                 .ToListAsync();
 
-            return Ok(customers);
+            // Get all transactions of these customers
+            var customerIds = customers
+                .Select(c => c.Id)
+                .ToList();
+
+            var transactions = await _context.Transactions
+                .Where(t => customerIds.Contains(t.CustomerId))
+                .ToListAsync();
+
+            // Total Udhaar from all customers
+            var totalUdhaar = transactions
+                .Where(t => t.Type == "Udhaar")
+                .Sum(t => t.Amount);
+
+            // Total payments received from all customers
+            var totalReceived = transactions
+                .Where(t => t.Type == "Payment")
+                .Sum(t => t.Amount);
+
+            // Total amount store owner has to receive
+            var totalReceivable = totalUdhaar - totalReceived;
+
+            return Ok(new
+            {
+                customers,
+
+                totalUdhaar,
+                totalReceived,
+                totalReceivable
+            });
         }
 
 

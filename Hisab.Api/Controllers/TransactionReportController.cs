@@ -1,4 +1,5 @@
-﻿using Hisab.Data;
+﻿
+using Hisab.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,9 @@ namespace Hisab.Controllers
         private readonly AppDbContext _context;
         private readonly ILogger<TransactionReportController> _logger;
 
-
-    public TransactionReportController(
-        AppDbContext context,
-        ILogger<TransactionReportController> logger)
+        public TransactionReportController(
+            AppDbContext context,
+            ILogger<TransactionReportController> logger)
         {
             _context = context;
             _logger = logger;
@@ -30,9 +30,12 @@ namespace Hisab.Controllers
         {
             try
             {
-                var businessIdClaim = User.FindFirst("BusinessId")?.Value;
+                var businessIdClaim =
+                    User.FindFirst("BusinessId")?.Value;
 
-                if (!Guid.TryParse(businessIdClaim, out var businessId))
+                if (!Guid.TryParse(
+                    businessIdClaim,
+                    out var businessId))
                 {
                     return Unauthorized(new
                     {
@@ -50,9 +53,27 @@ namespace Hisab.Controllers
                     });
                 }
 
-                var startDate = fromDate.ToDateTime(TimeOnly.MinValue);
-                var endDateExclusive = toDate.AddDays(1)
-                    .ToDateTime(TimeOnly.MinValue);
+                // Interpret the selected dates as Pakistan local dates.
+                var pakistanTimeZone =
+                    TimeZoneInfo.FindSystemTimeZoneById(
+                        "Asia/Karachi");
+
+                var startLocal = DateTime.SpecifyKind(
+                    fromDate.ToDateTime(TimeOnly.MinValue),
+                    DateTimeKind.Unspecified);
+
+                var endLocal = DateTime.SpecifyKind(
+                    toDate.AddDays(1).ToDateTime(TimeOnly.MinValue),
+                    DateTimeKind.Unspecified);
+
+                // Convert Pakistan local midnight to UTC.
+                var startDate = TimeZoneInfo.ConvertTimeToUtc(
+                    startLocal,
+                    pakistanTimeZone);
+
+                var endDateExclusive = TimeZoneInfo.ConvertTimeToUtc(
+                    endLocal,
+                    pakistanTimeZone);
 
                 var query = _context.Transactions
                     .AsNoTracking()
@@ -116,6 +137,5 @@ namespace Hisab.Controllers
             }
         }
     }
-
-
 }
+
